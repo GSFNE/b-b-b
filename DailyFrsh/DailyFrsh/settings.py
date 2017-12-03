@@ -15,6 +15,8 @@ import os
 import sys
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+#  如果应用一起放到一个文件夹里,在下面导入应用时,就需要加上文件夹的名字, 有下面这个代码,就不需要加文件夹的名字了
+# 前面 views和url在import时,也可以不用从文件夹名开始导入, 直接导入模型就行了,但是pycharm会报错,代码运行不错的
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 
@@ -125,3 +127,16 @@ TINYMCE_DEFAULT_CONFIG = {
     'width': 600,
     'height': 400,
 }
+
+# 发送邮件配置
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# smtp服务器地址
+EMAIL_HOST = 'smtp.163.com'
+# smtp服务的端口号
+EMAIL_PORT = 25
+# 发送邮件的邮箱
+EMAIL_HOST_USER = 'smartli_it@163.com'
+# 在邮箱中设置的客户端授权密码
+EMAIL_HOST_PASSWORD = 'smart123'
+# 收件人看到的发件人
+EMAIL_FROM = 'dailyfresh<smartli_it@163.com>'
