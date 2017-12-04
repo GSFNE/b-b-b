@@ -1,13 +1,16 @@
+# 处理注册业务使用的模块
 from django.shortcuts import render, HttpResponse,redirect
 from django.core.urlresolvers import reverse
 from apps.user.models import User
 from django.views.generic import View
-
+# 处理邮箱激活使用的模块
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from django.conf import settings
 from itsdangerous import SignatureExpired
-from celery_tasks.tasks import send_active_email
+from celery_tasks.tasks import send_register_active_email
 from django.core.mail import send_mail
+# 处理登陆使用的模块
+from django.contrib.auth import authenticate, login
 
 # Create your views here.
 def register(request):
@@ -80,15 +83,16 @@ class RegisterView(View):
             # 想客户端邮箱发送的信息的格式是: user/active/user_id
             # 组织邮件信息
             # 发送信息,找人代发,自己继续响应客户,   异步 使用celery
-            subject = '天天生鲜激活信息'
-            message = ''
-            sender = settings.EMAIL_FROM
-            receiver = [email]
-            html_message = '<h1>%s,欢迎您成为天天生鲜注册会员</h1>请点击以下链接激活您的账号<br/><a href="http://127.0.0.1:8000/user/active/%s">http://127.0.0.1:8000/user/active/%s</a>' % (
-            username, token, token)
-
-            send_mail(subject, message, sender, receiver, html_message=html_message)
-
+            # subject = '天天生鲜激活信息'
+            # message = ''
+            # sender = settings.EMAIL_FROM
+            # receiver = [email]
+            # html_message = '<h1>%s,欢迎您成为天天生鲜注册会员</h1>请点击以下链接激活您的账号<br/><a href="http://127.0.0.1:8000/user/active/%s">http://127.0.0.1:8000/user/active/%s</a>' % (
+            # username, token, token)
+            #
+            # send_mail(subject, message, sender, receiver, html_message=html_message)
+            send_register_active_email.delay(email, username, token)  # delay() 是task装饰器的功能
+            # 下面还有详情操作,转celery_tasks.tasks.py
             # 相应, 跳转到登陆页面
             return render(request, 'login.html')
             # return redirect(reverse('goods:index'))  # 不能用
@@ -120,3 +124,57 @@ class ActiveView(View):
         except SignatureExpired:
             # 激活过期了,这里限定的是7200s = 2h  2个小时
             return HttpResponse('激活链接过期')
+
+# 在用户登陆时, 使用redis作为django和session的缓存, 配置缓存 settis.py
+class LoginView(View):
+    # 模型类,django封装好的,get post两种请求方式,自动调用各自的函数
+    # get 方式,请求登陆页面
+    def get(self, request):
+        # 判断上次登陆有没有设置记住用户名/密码, 尝试从cookie中读取username
+        if 'username' in request.COOKIES:
+            username = request.COOKIES['username']
+            checked = 'checked'
+        else:
+            username = ''
+            checked = ''
+
+        return render(request, 'login.html', {'username': username, 'checked': checked})
+
+    # post 请求,提交登陆数据
+    # post 请求, 需要确认的事情:
+    # 1.用户输入(用户名/密码)是否为空;
+    # 2.登陆校验,用户名,密码是否正确(authenticate()方法进行校验)
+    # 3.用户状态是否激活(is_active=1)
+    # 4.判断是否记住用户名和密码(设置cookie,  通过Httpresponse对象, set_cookie()方法)
+    #  删cookie信息  Httpresponse对象,调用delete_cookie()方法
+    def post(self,request):
+        username = request.POST.get('username')
+        password = request.POST.get('pwd')
+        remember = request.POST.get('remember')
+
+        if not all([username, password]):
+            return HttpResponse('用户名和密码输入不能为空')
+        # if --> else  这里else省略了
+        # 输入不为空, 开始处理业务
+        # 登陆校验
+        user = authenticate(username=username, password=password)
+        if user is not None:
+            # 有这个用户,登陆用户名和密码都正确
+            # 验证了用户名密码正确,开始处理登陆页面的其他功能
+            # 用户是否激活: 激活返回登陆成功的页面,未激活返回登陆失败,要求先激活
+            if user.is_active:  # 用户已经激活了
+                login(request, user)  # 保存用户的登陆状态
+                # 然后判断是否点击了 记住用户名
+                # 需要调用Httpresponse对象,来操作set_cookie()方法
+                response = HttpResponse('登陆成功')
+                if remember == 'on':  # 记住用户名
+                    response.set_cookie('username', username, max_age=7*24*3600)
+                    # 参数:键值对: key, value,   max_age 是用户名的最长时间,以秒为单位, 这里是一个星期
+                else:
+                    response.delete_cookie('username')  # 删除cookie信息, 只需要传入key
+
+                return response
+            else:
+                return HttpResponse('用户未激活')
+        else:
+            return HttpResponse('用户名或密码不正确')

@@ -140,3 +140,19 @@ EMAIL_HOST_USER = 'smartli_it@163.com'
 EMAIL_HOST_PASSWORD = 'smart123'
 # 收件人看到的发件人
 EMAIL_FROM = 'dailyfresh<smartli_it@163.com>'
+
+# 使用redis,做django和session的缓存
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        # 使用redis缓存的主机的ip, redis端口, 做缓存的redis的数据库
+        "LOCATION": "redis://192.168.102.131:6379/7",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+# 设置session储存在缓存中
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
