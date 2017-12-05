@@ -4,13 +4,14 @@ from django.core.mail import send_mail
 from celery import Celery
 
 # 初始化django运行所依赖的环境
-# import os
-# import django
-# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dailyfresh.settings")
-# django.setup()
+import os
+import django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "DailyFrsh.settings")
+django.setup()
 
 # 创建一个Celery类的实例对象
-app = Celery('celery_tasks.tasks', broker='redis://192.168.102.131:6379/6')
+app = Celery('celery_tasks.tasks', broker='redis://127.0.0.1:6379/6')
+# 这里broker的ip地址,写broker所在的主机的ip
 
 
 # 定义任务函数
@@ -22,8 +23,8 @@ def send_register_active_email(to_email, username, token):
     message = ''
     sender = settings.EMAIL_FROM
     receiver = [to_email]
-    html_message = '<h1>%s, 欢迎您成为天天生鲜注册会员</h1>请在两个小时内点击链接激活您的账号<br/><a href="http://127.0.0.1:8000/user/active/%s">http://127.0.0.1:8000/user/active/%s</a>'%(username, token, token)
-
+    html_message = '<h1>%s, 欢迎您成为天天生鲜注册会员</h1>请在两个小时内点击链接激活您的账号<br/><a href="http://192.168.102.131:8000/user/active/%s">http://192.168.102.131:8000/user/active/%s</a>'%(username, token, token)
+                                                                #  账号链接跳转的ip地址,写服务器所在的ip
     # 发送邮件
     import time
     time.sleep(5)

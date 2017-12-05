@@ -10,7 +10,7 @@ from itsdangerous import SignatureExpired
 from celery_tasks.tasks import send_register_active_email
 from django.core.mail import send_mail
 # 处理登陆使用的模块
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 
 # Create your views here.
 def register(request):
@@ -167,7 +167,8 @@ class LoginView(View):
                 login(request, user)  # 保存用户的登陆状态
                 # 然后判断是否点击了 记住用户名
                 # 需要调用Httpresponse对象,来操作set_cookie()方法
-                response = HttpResponse('登陆成功')
+
+                response = redirect(reverse('goods:index'))
                 if remember == 'on':  # 记住用户名
                     response.set_cookie('username', username, max_age=7*24*3600)
                     # 参数:键值对: key, value,   max_age 是用户名的最长时间,以秒为单位, 这里是一个星期
@@ -179,3 +180,10 @@ class LoginView(View):
                 return HttpResponse('用户未激活,请先激活')
         else:
             return HttpResponse('用户名或密码不正确')
+
+
+class LogoutView(View):
+    # 退出
+    def get(self, request):
+        logout(request)  # 退出,清除保存的session数据, 退出登陆状态
+        return redirect(reverse('goods:index'))  # 跳转到首页
