@@ -172,8 +172,8 @@ class LoginView(View):
                 login(request, user)  # 保存用户的登陆状态
                 # 然后判断是否点击了 记住用户名
                 # 需要调用Httpresponse对象,来操作set_cookie()方法
-                next_url = request.POST.get('next', reverse('goods:index')
-                                            )
+                next_url = request.GET.get('next', reverse('goods:index'))
+                # print(next_url)
                 response = redirect(next_url)
                 if remember == 'on':  # 记住用户名
                     response.set_cookie('username', username, max_age=7*24*3600)
@@ -212,6 +212,7 @@ class UserinfoView(LoginRequiredMixin, View):
         #            类  .  实例对象   .     方法
         # 这里Address是模型类, objects是AddressManager()类的一个对象,对象调用方法
 
+
         # 获取用的历史浏览记录:
         conn = get_redis_connection('default')
         # 这里用列表保存浏览记录, 列表保存的是  浏览的商品的id
@@ -227,17 +228,50 @@ class UserinfoView(LoginRequiredMixin, View):
         # 组织上下文
         context = {
             'page': 'user',
-            'addr': address,
+            'address': address,
             'skus': skus
         }
 
         return render(request, 'user_center_info.html', context)
 
 
-class UserorderView(View):
+class UserorderView(LoginRequiredMixin, View):
     def get(self,request):
-        return render(request, 'user_center_order.html')
+        # get方式请求, 显示订单页面
+        return render(request, 'user_center_order.html', {'page': 'order'})
 
-class UseraddressView(View):
+
+class UseraddressView(LoginRequiredMixin, View):
     def get(self,request):
-        return render(request, 'user_center_site.html')
+        user = request.user
+        address = Address.objects.get_default_address(user)  # 读取默认地址
+
+        return render(request, 'user_center_site.html', {'page': 'address', 'address': address})
+
+    def post(self,request):
+
+        receiver = request.POST.get('receiver')
+        addr = request.POST.get('addr')
+        zip_code = request.POST.get('zip_code')
+        phone = request.POST.get('phone')
+
+        if not all([receiver, addr, phone]):
+            return render(request, 'user_center_site.html', {'error': '提交内容不能为空'})
+
+        user = request.user
+        address = Address.objects.get_default_address(user)  # 读取默认地址
+        # 设置默认地址, 如果有默认地址了, 新加入的地址,就不设置默认地址,is_default为False
+        if address:
+            is_default = False
+        else:
+            is_default = True
+
+        Address.objects.create(
+            user = user,
+            receiver = receiver,
+            addr = addr,
+            zip_code = zip_code,
+            phone = phone,
+            is_default = is_default
+        )
+        return redirect(reverse('user:address'))

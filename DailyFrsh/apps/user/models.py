@@ -21,6 +21,7 @@ class AddressManager(models.Manager):
         try:
             # self.model 查询self所在的模型类
             address = self.get(user=user, is_default=True)
+            # 得到的address 代表默认地址的对象
             # 有默认的 就显示默认地址,
         except self.model.DoesNotExist:
             # 没有默认的为None
