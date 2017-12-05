@@ -9,8 +9,13 @@ from django.conf import settings
 from itsdangerous import SignatureExpired
 from celery_tasks.tasks import send_register_active_email
 from django.core.mail import send_mail
-# 处理登陆使用的模块
+# 处理登陆使用的模块(退出模块)
 from django.contrib.auth import authenticate, login, logout
+# 用户中心页的模块
+from utils.mixin import LoginRequiredMixin
+from apps.user.models import Address
+from apps.goods.models import GoodsSKU
+from django_redis import get_redis_connection
 
 # Create your views here.
 def register(request):
@@ -167,8 +172,9 @@ class LoginView(View):
                 login(request, user)  # 保存用户的登陆状态
                 # 然后判断是否点击了 记住用户名
                 # 需要调用Httpresponse对象,来操作set_cookie()方法
-
-                response = redirect(reverse('goods:index'))
+                next_url = request.POST.get('next', reverse('goods:index')
+                                            )
+                response = redirect(next_url)
                 if remember == 'on':  # 记住用户名
                     response.set_cookie('username', username, max_age=7*24*3600)
                     # 参数:键值对: key, value,   max_age 是用户名的最长时间,以秒为单位, 这里是一个星期
@@ -187,3 +193,51 @@ class LogoutView(View):
     def get(self, request):
         logout(request)  # 退出,清除保存的session数据, 退出登陆状态
         return redirect(reverse('goods:index'))  # 跳转到首页
+
+
+# /user/  直接链接的就是用户中心
+class UserinfoView(LoginRequiredMixin, View):
+    '''
+    要进行的处理:
+    前提: 就是需要用户先登陆, 判断用户是否登陆
+    1. 要显示用户的信息: 用户名,联系电话,用户地址
+    2. 显示用户的浏览历史记录
+    '''
+    def get(self, request):
+        # 获取登陆用户
+        # django框架会给request对象增加一个属性user,通过属性,可以得到,该用户对象
+        user = request.user
+        # 获取用户的默认地址:
+        address = Address.objects.get_default_address(user)
+        #            类  .  实例对象   .     方法
+        # 这里Address是模型类, objects是AddressManager()类的一个对象,对象调用方法
+
+        # 获取用的历史浏览记录:
+        conn = get_redis_connection('default')
+        # 这里用列表保存浏览记录, 列表保存的是  浏览的商品的id
+        history_key = 'history_%d' % user.id
+        # 获取用户最新浏览的五个数据  lrange(key, start, end)
+        sku_ids = conn.lrange(history_key, 0, 4)
+        skus = []  # 建立空列表,接收通过id查询到的商品对象
+        for sku_id in sku_ids:
+            # 遍历,通过id查找 商品对象
+            sku = GoodsSKU.objects.get(id=sku_id)
+            skus.append(sku)
+
+        # 组织上下文
+        context = {
+            'page': 'user',
+            'addr': address,
+            'skus': skus
+        }
+
+        return render(request, 'user_center_info.html', context)
+
+
+class UserorderView(View):
+    def get(self,request):
+        return render(request, 'user_center_order.html')
+
+class UseraddressView(View):
+    def get(self,request):
+        return render(request, 'user_center_site.html')

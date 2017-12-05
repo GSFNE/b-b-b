@@ -146,7 +146,7 @@ CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         # 使用redis缓存   主机的ip, redis端口, 做缓存的redis的数据库
-        "LOCATION": "redis://127.0.0.1:6379/7",
+        "LOCATION": "redis://127.0.0.1:6379/8",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
@@ -157,4 +157,4 @@ CACHES = {
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "default"
 
-LOGIN_URL = 'user/login'
+LOGIN_URL = '/user/login'
