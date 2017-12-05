@@ -25,6 +25,7 @@ def register(request):
         password = request.POST.get('pwd')
         email = request.POST.get('email')
         allow = request.POST.get('allow')  # 用户同意协议,同意是on, 不同意就是None
+
         if not all([username, password, email]):
             return render(request, 'register.html', {'errmsg': '注册信息不完整'})
         if allow != 'on':  # 用户同意协议; 不同意协议,返回注册页面
@@ -63,7 +64,7 @@ class RegisterView(View):
         if allow != 'on':  # 用户同意协议; 不同意协议,返回注册页面
             return render(request, 'register.html')
         if cpassword != password:
-            return render(request, 'register.html')
+            return render(request, 'register.html', {'errmsg': '两次输入密码不一致'})
 
         try:
             # 得到用户输入的用户名,在数据库判断,判断用户名是否存在
@@ -94,8 +95,8 @@ class RegisterView(View):
             send_register_active_email.delay(email, username, token)  # delay() 是task装饰器的功能
             # 下面还有详情操作,转celery_tasks.tasks.py
             # 相应, 跳转到登陆页面
-            return render(request, 'login.html')
-            # return redirect(reverse('goods:index'))  # 不能用
+            # return render(request, 'login.html')
+            return redirect(reverse('goods:index'))
 
         # else:  理解: try--> except--> else
         else:  # 用户名存在
@@ -175,6 +176,6 @@ class LoginView(View):
 
                 return response
             else:
-                return HttpResponse('用户未激活')
+                return HttpResponse('用户未激活,请先激活')
         else:
             return HttpResponse('用户名或密码不正确')

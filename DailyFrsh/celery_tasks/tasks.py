@@ -18,11 +18,11 @@ app = Celery('celery_tasks.tasks', broker='redis://192.168.102.131:6379/6')
 def send_register_active_email(to_email, username, token):
     '''发送激活邮件'''
     # 组织邮件信息
-    subject = '天天生鲜欢迎信息'
+    subject = '天天生鲜账号激活'
     message = ''
     sender = settings.EMAIL_FROM
     receiver = [to_email]
-    html_message = '<h1>%s, 欢迎您成为天天生鲜注册会员</h1>请点击以下链接激活您的账号<br/><a href="http://127.0.0.1:8000/user/active/%s">http://127.0.0.1:8000/user/active/%s</a>'%(username, token, token)
+    html_message = '<h1>%s, 欢迎您成为天天生鲜注册会员</h1>请在两个小时内点击链接激活您的账号<br/><a href="http://127.0.0.1:8000/user/active/%s">http://127.0.0.1:8000/user/active/%s</a>'%(username, token, token)
 
     # 发送邮件
     import time
