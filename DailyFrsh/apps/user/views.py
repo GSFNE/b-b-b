@@ -209,12 +209,16 @@ class UserinfoView(LoginRequiredMixin, View):
         user = request.user
         # 获取用户的默认地址:
         address = Address.objects.get_default_address(user)
-        #            类  .  实例对象   .     方法
+        #            类  .  对象   .     方法
         # 这里Address是模型类, objects是AddressManager()类的一个对象,对象调用方法
+        # 得到的address 是一个 默认地址的用户对象,   是一个对象
 
 
         # 获取用的历史浏览记录:
+        # 链接redis数据库,在settings里面配置, 用django-redis包里面的get_redis_connection()方法连接
         conn = get_redis_connection('default')
+        # 浏览历史,是在用户点击商品进行查看详情的时候,添加的记录, 所以添加商品记录是在商品模型类
+        # 而读取记录, 是在用户查看个人中心时, 进行读取的
         # 这里用列表保存浏览记录, 列表保存的是  浏览的商品的id
         history_key = 'history_%d' % user.id
         # 获取用户最新浏览的五个数据  lrange(key, start, end)
