@@ -1,7 +1,11 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.generic import View
 from django_redis import get_redis_connection
-from apps.goods.models import GoodsType, IndexGoodsBanner, IndexPromotionBanner, IndexTypeGoodsBanner
+from apps.goods.models import GoodsType, IndexGoodsBanner, IndexPromotionBanner, IndexTypeGoodsBanner, GoodsSKU
+from apps.order.models import OrderGoods
+from django.core.urlresolvers import reverse
+
+
 
 # Create your views here.
 
@@ -46,3 +50,26 @@ class IndexView(View):
         }
         # 返回主页面
         return render(request, 'index.html', context)
+
+# 前端向后端传递参数的方式:
+# 1. url 参数传递 goods/list/1/1
+# 2. get
+# 3. post
+
+class DetailView(View):
+    # 显示商品详情
+    def get(self, request, sku_id):
+        # 获取商品详情
+        try:
+            sku = GoodsSKU.objects.get(id=sku_id)
+        except GoodsSKU.DoesNotExist:
+            # 商品不存在,跳转到首页
+            return redirect(reverse('goods:index'))
+        # else: 这里省略了
+        # 商品存在
+        # 1. 获取和商品同类型的两种新品
+        new_skus = GoodsSKU.objects.filter(type=sku.type).order_by('-create_time')[0:2]
+        # 2. 获取商品的评论信息
+        order_skus = OrderGoods.objects.filter(sku=sku).order_by('-create_time')
+        # 3. 获取和商品同一个spu的其他规格商品(比如: 盒装草莓和500g草莓,商品一样,规格不一样)
+        same_spu_skus = GoodsSKU.objects.filter(goods=sku.goods).exclude(id=sku.id)  # exclude()不包括自己

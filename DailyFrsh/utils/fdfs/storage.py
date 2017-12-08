@@ -37,8 +37,8 @@ class FDFSStorage(Storage):
         # 调用upload_by_buffer()方法
         res = client.upload_by_buffer(content)
         # 判断是否上传成功
-        # if res['Status'] != 'Upload successd.':
-        #     raise Exception('上传文件到FDFS失败')
+        if res['Status'] != 'Upload successed.':
+            raise Exception
         file_id = res['Remote file_id']
         # 返回文件的id
         return file_id

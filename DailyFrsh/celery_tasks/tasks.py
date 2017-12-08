@@ -3,6 +3,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from celery import Celery
 
+
 # 初始化django运行所依赖的环境
 import os
 import django
@@ -12,6 +13,11 @@ django.setup()
 # 创建一个Celery类的实例对象
 app = Celery('celery_tasks.tasks', broker='redis://127.0.0.1:6379/6')
 # 这里broker的ip地址,写broker所在的主机的ip
+
+# 这里需要django环境, 需要先建立来环境, 再导入
+from apps.goods.models import GoodsType, IndexGoodsBanner, IndexPromotionBanner, IndexTypeGoodsBanner
+from django.template import loader
+
 
 
 # 定义任务函数
@@ -49,3 +55,44 @@ celery -A celery_tasks.tasks worker -l info
  os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dailyfresh.settings")
  django.setup()
 '''
+
+@app.task
+def generate_static_index_html():
+    # 生成静态页面
+    # 生成之前先要做: 先查询数据库,得到数据,拿到完整的页面
+    # 查询数据:
+    # 获取商品分类信息
+    types = GoodsType.objects.all()
+    # 获取首页轮播商品的信息
+    index_banner = IndexGoodsBanner.objects.all().order_by('index')
+    # 获取首页商品活动信息
+    promotion_banner = IndexPromotionBanner.objects.all().order_by('index')
+    # 获取首页分类商品信息展示信息
+    for type in types:
+        # 查询文字信息
+        title_banner = IndexTypeGoodsBanner.objects.filter(type=type, display_type=0).order_by('index')
+        # 查询图片信息
+        image_banner = IndexTypeGoodsBanner.objects.filter(type=type, display_type=1).order_by('index')
+
+        type.title_banner = title_banner
+        type.image_banner = image_banner
+
+    cart_count = 0
+    # 上下文
+    context = {
+        'types': types,
+        'index_banner': index_banner,
+        'promotion_banner': promotion_banner,
+        'cart_count': cart_count
+    }
+
+    # 生成静态页面:
+    temp = loader.get_template('static_index.html')
+    # 生成静态页面:
+    static_html = temp.render(context)
+
+    # 保存静态文件:
+    save_path = os.path.join(settings.BASE_DIR, 'static/index.html')
+    with open(save_path, 'w') as f:
+        f.write(static_html)
+
