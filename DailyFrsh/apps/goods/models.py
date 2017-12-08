@@ -70,12 +70,15 @@ class IndexGoodsBanner(BaseModel):
     '''首页轮播商品展示模型类'''
     sku = models.ForeignKey('GoodsSKU', verbose_name='商品')
     image = models.ImageField(upload_to='banner', verbose_name='图片')
-    index = models.SmallIntegerField(default=0, verbose_name='展示顺序') # 0 1 2 3
+    index = models.SmallIntegerField(default=0, verbose_name='展示顺序')  # 0 1 2 3
 
     class Meta:
         db_table = 'df_index_banner'
         verbose_name = '首页轮播商品'
         verbose_name_plural = verbose_name
+        # plural  复数的意思
+    def __str__(self):
+        return self.sku.name
 
 
 class IndexTypeGoodsBanner(BaseModel):
@@ -107,3 +110,5 @@ class IndexPromotionBanner(BaseModel):
         db_table = 'df_index_promotion'
         verbose_name = "主页促销活动"
         verbose_name_plural = verbose_name
+    def __str__(self):
+        return self.name
