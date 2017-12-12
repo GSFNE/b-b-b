@@ -1,11 +1,13 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, HttpResponse
 from django.views.generic import View
-from django_redis import get_redis_connection
+from django_redis import get_redis_connection   # 链接redis数据库
 from apps.goods.models import GoodsType, IndexGoodsBanner, IndexPromotionBanner, IndexTypeGoodsBanner, GoodsSKU
 from apps.order.models import OrderGoods
 from django.core.urlresolvers import reverse
 
-from django.core.cache import cache
+from django.core.cache import cache   # 设置和清楚缓存
+
+from django.core.paginator import Paginator   # 分页使用
 
 
 
@@ -44,7 +46,8 @@ class IndexView(View):
 
             # 设置缓存,三个参数: 缓存的key(要通过这个key取出缓存), 上下文, 缓存有效期
             cache.set('index_page_data', context, 3600)
-        # else:   这里省略了, 表示有缓存
+        # else:   这里省略了, 表示有缓存, 注意缩进
+
         # 获取用户
         user = request.user
         # 默认的购物车的数量为0, 如果有加入收藏的商品,从数据库中读取,没有为0
@@ -116,3 +119,70 @@ class DetailView(View):
 
         return render(request, 'detail.html', context)
 
+
+'''
+列表页: listview
+前端向后台传递:
+1. list/种类id/页码/排序方式
+2. list/种类id?页码=x&排序方式=x
+3. list/种类id/页码?sort=x   这里用的是这种
+list/1/1?sort=default  列表页商品种类的id是1, 第一页,按照默认方式排序
+'''
+
+# /list/type_id/page?sort=
+class ListView(View):
+
+    def get(self, request, type_id, page):
+        # 尝试通过请求的type_id 查询数据库,显示分类信息
+        try:
+            type = GoodsType.objects.get(id=type_id)
+        except GoodsType.DoesNotExist:
+            # 商品种类不存在
+            return redirect(reverse('goods:index'))
+        # else:  表示商品种类存在
+        # 获取商品的排列方式
+        sort = request.GET.get('sort', 'default')  # 如果有排列方式就按照传递的排列方式排列,如果没有就按照默认的排列
+        # sort = default(默认, 这里使用id排列);
+        # sort = price (价格排列,升序,从低到高)
+        # sort = hot (人气, 按照销量, 降序,从高到低)
+        if sort == 'price':
+            skus = GoodsSKU.objects.filter(type=type).order_by('price')
+        elif sort == 'hot':
+            skus = GoodsSKU.objects.filter(type=type).order_by('-sales')
+        else:
+            sort = 'default'
+            skus = GoodsSKU.objects.filter(type=type).order_by('-id')
+
+        # 商品过多, 列表页需要分页
+        paginator = Paginator(skus, 1)
+        # 处理接收到的请求的页码: page
+        page = int(page)
+        # num_pages  pagintor对象的属性,返回页面的总页数
+        if page > paginator.num_pages or page <= 0:
+            page = 1  # 如果请求的page数值正确,就默认是第一页
+
+        # 获取page页的实例对象, 就是获取请求的page页的信息对象
+        # page()  paginator对象的方法   返回一个Page对象,通过页码,返回页面的对象
+        skus_page = paginator.page(page)
+
+        # 获取两个该类的新品的信息
+        new_skus = GoodsSKU.objects.filter(type=type).order_by('-create_time')[0:2]
+
+        # 购物车获取条目数
+        # 获取用户
+        cart_count = 0
+        user = request.user
+        if user.is_authenticated():
+            con = get_redis_connection('default')
+            cart_key = 'cart_%d' % user.id
+            cart_count = con.hlen(cart_key)
+        # 上下文,传递数据,前段继续构造数据
+        context = {
+            'type': type,
+            'skus_page': skus_page,
+            'new_skus': new_skus,
+            'cart_count': cart_count,
+            'sort': sort
+        }
+        # return HttpResponse('1')
+        return render(request, 'list.html', context)
