@@ -167,3 +167,5 @@ FDFS_CLIENT_CONF = './utils/fdfs/client.conf'
 
 # 指定fdfs服务器nginx服务的地址, 写fastdfs运行的主机的ip 和 端口号
 FDFS_NGINX_URL = 'http://192.168.102.131:8888/'
+
+# 配置搜索框的文件
