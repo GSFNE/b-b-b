@@ -9,7 +9,7 @@ urlpatterns = [
 
     url(r'^logout$', LogoutView.as_view(), name='logout'),  # 用户退出
 
-    url(r'^$', UserinfoView.as_view(), name='user') , # 用户中心
+    url(r'^$', UserinfoView.as_view(), name='user'),  # 用户中心
     url(r'^address$', UseraddressView.as_view(), name='address'),  # 用户地址
-    url(r'^order$', UserorderView.as_view(), name='order'),  # 用户订单
+    url(r'^order/(?P<page>\d+)$', UserorderView.as_view(), name='order'),  # 用户订单
 ]

@@ -156,7 +156,7 @@ CACHES = {
 # 设置session储存在缓存中
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "default"
-# 指定登陆url的路径
+# 指定登陆url的路径  配合utils里面的mixin.py文件， 需要登陆才能访问的页面，先要跳转登陆页面
 LOGIN_URL = '/user/login'
 
 # 指定django上传文件的存储类  --> 这里用 FastDFS 存储文件
@@ -167,5 +167,6 @@ FDFS_CLIENT_CONF = './utils/fdfs/client.conf'
 
 # 指定fdfs服务器nginx服务的地址, 写fastdfs运行的主机的ip 和 端口号
 FDFS_NGINX_URL = 'http://192.168.102.131:8888/'
+
 
 # 配置搜索框的文件
